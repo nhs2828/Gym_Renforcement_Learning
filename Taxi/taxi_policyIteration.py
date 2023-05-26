@@ -1,47 +1,8 @@
 import gymnasium as gym
-import time
 import copy as cp
-import numpy as np
+from agent import *
+from taxi import *
 
-class Agent():
-    def __init__(self, env):
-        self.env = env
-    
-    def act(self, obs):
-        pass
-
-    def store(self, obs, action, new_obs, reward):
-        pass
-
-class AgentRandom(Agent):
-    def __init__(self, env):
-        super.__init__(env)
-
-    def act(self, obs):
-        return self.env.action_space.sample()
-
-    def store(self, obs, action, new_obs, reward):
-        pass
-
-class AgentPolicy(Agent):
-    def __init__(self, env, pi):
-        super().__init__(env)
-        self.pi = pi
-
-    def act(self, obs):
-        return self.pi[obs]
-
-    def store(self, obs, action, new_obs, reward):
-        pass
-
-
-def ini_pi(env):
-    pi = {}
-    nb_state = env.observation_space.n
-    nb_action = env.action_space.n
-    for state in range(nb_state):
-        pi[state] = np.random.randint(nb_action)
-    return pi
 
 def eval_pol(pi, env, gamma, thresh):
     nb_state = env.observation_space.n
@@ -95,24 +56,6 @@ def policy_iteration(env, gamma, thresh):
         pi = cp.deepcopy(pi_suivant)
     return pi
 
-def play(agent, fps = 60, verbose = False):
-    obs, _ = agent.env.reset()
-    eps = 500
-    cum_r = 0
-    for i in range(eps):
-        last_obs = obs
-        action = agent.act(obs)
-        obs, reward, done, _, info = agent.env.step(int(action))
-        agent.store(last_obs, action, obs, reward)
-        cum_r += reward
-        if fps > 0:
-            agent.env.render()
-            if verbose:
-                print(f"Iter{i}", info)
-            time.sleep(1/fps)
-        if done:
-            break
-    print("Reward", cum_r)
 
 if __name__ == '__main__':
     env = gym.make("Taxi-v3", render_mode = 'human')
