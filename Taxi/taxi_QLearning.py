@@ -19,7 +19,6 @@ def Q_learning(env, gamma, learning_rate, episode):
             new_state,reward, done, _, _ = env.step(int(action))
             Q[state][action] = Q[state][action] + learning_rate*(reward + gamma*np.max(Q[new_state]) - Q[state][action])
             state = new_state
-
     # Greedy
     pi = ini_pi(env)
     for state in range(nb_state):
@@ -28,9 +27,9 @@ def Q_learning(env, gamma, learning_rate, episode):
 
 if __name__ == '__main__':
     env = gym.make('Taxi-v3', render_mode = 'human')
-    gamma = 0.9
-    learning_rate = 0.005
-    nb_episode = 500
+    gamma = 0.95
+    learning_rate = 0.1
+    nb_episode = 10000
     print("Begin training")
     pi = Q_learning(gym.make('Taxi-v3'), gamma, learning_rate, nb_episode)
     print("Traning done")
