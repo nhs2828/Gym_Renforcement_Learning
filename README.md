@@ -4,7 +4,7 @@ For this game Taxi, 4 algorithmes were applied, which are Policy Iteration, Valu
 ![taxi](https://github.com/nhs2828/Gym_Renforcement_Learning/assets/78078713/e8fa41f7-0f42-44ea-8bc0-3a92eb86d5b4)
 
 <b>Cart Pole</b></br>
-<p>For this game, I've used Deep-Q Network with replay buffer to learn the agent. Still need to implement Target Network to compare the performance of learning.</p>
+<p>For this mini-game, I've used 2 versions, Deep-Q Network and Deep-Q Network with Target Network, both with replay buffer to train the agent.</p>
 <p>Objective: Minimise Temporal Difference Loss (TD Loss) using MSE Loss, which is:</p>
 
 ```math
