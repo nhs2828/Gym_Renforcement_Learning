@@ -1,6 +1,7 @@
 import gymnasium as gym
 import torch
 import math
+import time
 from random import sample
 
 
@@ -21,13 +22,15 @@ class Buffer:
         return sample(self.memoire, taille_sample)
 
 class DQN(torch.nn.Module):
-    def __init__(self, taille_state, taille_action, lr = 3e-3):
+    def __init__(self, taille_state, taille_action, lr = 3e-4):
         super().__init__()
         self.taille_state = taille_state
         self.taille_action = taille_action
         self.lr = lr
         self.net = torch.nn.Sequential(
                         torch.nn.Linear(self.taille_state, 24),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(24, 24),
                         torch.nn.ReLU(),
                         torch.nn.Linear(24, self.taille_action)
         )
@@ -51,7 +54,7 @@ class AgentDQN(torch.nn.Module):
         self.taille_state = taille_state
         self.taille_action = taille_action
         self.batch_size = batch
-        self.buffer = Buffer(self.batch_size)
+        self.buffer = Buffer(5*self.batch_size)
         # NN
         self.dqn = DQN(self.taille_state, self.taille_action)
         # Hyper-param
@@ -95,7 +98,7 @@ if __name__ == '__main__':
     TAILLE_ACTION = env.action_space.n
     TAILLE_BATCH = 32
     gamma = 0.95
-    nb_episode = 1000
+    nb_episode = 500
 
     agent = AgentDQN(TAILE_STATE, TAILLE_ACTION, gamma, TAILLE_BATCH)
     score_max = -math.inf
@@ -120,6 +123,7 @@ if __name__ == '__main__':
     #torch.save(agent.dqn, path_best)
     print("max:", score_max)
     # avec image sur model final
+    fps = 60
     env = gym.make('CartPole-v1', render_mode = 'human')
     r = 0
     state, _ = env.reset()
@@ -129,8 +133,12 @@ if __name__ == '__main__':
         state_suivant, reward, done, _, info = env.step(action)
         state_suivant = torch.as_tensor(state_suivant).view(1,-1) # un peu moche, faut reorganiser un peu ...
         r += reward
+        if fps > 0:
+            env.render()
+            time.sleep(1/fps)
         if done:
             break
+        state = torch.tensor(state_suivant)
     print(f"Fini, score = {r}")
 
 
