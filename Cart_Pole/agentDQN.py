@@ -48,6 +48,12 @@ class DQN(torch.nn.Module):
             self.optim.step()
             self.optim.zero_grad()
 
+    def updateParam(self, dqn):
+        """
+            Pour Target Network, copier les parametres d'autre DQN
+        """
+        self.load_state_dict(dqn.state_dict())
+
 class AgentDQN():
     def __init__(self, taille_state, taille_action, gamma=0.99, batch=32):
         self.taille_state = taille_state
@@ -101,7 +107,7 @@ if __name__ == '__main__':
 
     agent = AgentDQN(TAILE_STATE, TAILLE_ACTION, gamma, TAILLE_BATCH)
     score_max = -math.inf
-    path_best = 'bestModel/best.pt'
+    #path_best = 'bestModel/best.pt'
     for i in range(nb_episode):
         #state, _ = env.reset(seed=0)
         state, _ = env.reset()
@@ -119,7 +125,7 @@ if __name__ == '__main__':
                 print(f"Episode {i}/{nb_episode}, fini à {frame} frame, explore {agent.explore},score: {cum_reward}")
                 break
             state = torch.tensor(state_suivant)
-    torch.save(agent.dqn, path_best)
+    #torch.save(agent.dqn, path_best)
     print("max:", score_max)
     # avec image sur model final
     fps = 60
