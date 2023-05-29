@@ -141,10 +141,10 @@ class AgentDDPG(Agent):
         if torch.rand(1).item() < self.explore: # solf greedy
             if self.env.unwrapped.spec.id == "LunarLander-v2":
                 return Uniform(-1, 1).sample((self.taille_action,)).numpy() # np.array([main, lateral])
-        return self.actor(state)[0].numpy()
+        return self.actor(state)[0].detach().numpy()
     
     def act_opt(self, state): # 1 actor
-        return self.actor(state)[0].numpy()
+        return self.actor(state)[0].detach().numpy()
     
     def setActor(self, path): 
         self.actor = torch.load(path)
@@ -153,9 +153,15 @@ class AgentDDPG(Agent):
         self.buffer.add([state, reward, action, done, state_suivant])
 
     def updateTargetDDPG(self):
-        return self.dqnCritic.getModule()
+        netQ = self.dqnCritic.getNet()
+        netT = self.dqnTarget.getNet()
+        i=0
+        for _ in netQ: # 2 nn have same architecture
+            if isinstance(netQ[i], torch.nn.Linear):
+                netT[i].weight = torch.nn.Parameter(self.tau*netQ[i].weight + (1-self.tau)*netT[i].weight)
+            i += 1
 
-    def updateNetworks(self, state, action, reward, done, state_suivant):
+    def updateNetworks(self, state, reward, action, done, state_suivant):
         assert list(state.shape) == [1, self.taille_state]
         assert list(action.shape) == [1, self.taille_action]
         state_suivant.requires_grad = True # to update Actor
@@ -165,11 +171,11 @@ class AgentDDPG(Agent):
         input_Q = torch.hstack((state, action))
         input_Q_suivant = torch.hstack((state_suivant, outActor)) 
         #
-        Q = self.dqnTarget.forward(input_Q)
+        Q = self.dqnTarget.forward(input_Q) # y_hat
         Q_suivant = self.dqnTarget.forward(input_Q_suivant)
         y = reward + self.gamma*Q_suivant
         if done:
-            y = reward
+            y = torch.tensor(reward, dtype=torch.float32).view(1,-1)
         # 1 epoch
         loss = self.f_loss(Q, y)
         loss.backward()
@@ -178,52 +184,18 @@ class AgentDDPG(Agent):
         self.optActor.step()
         self.optQ.zero_grad()
         self.optActor.zero_grad()
-
+        # Target
+        self.updateTargetDDPG()
 
     def replay(self, batch_seuil, decay):
         if self.buffer.getLen() < batch_seuil:
             return
         mini_batch = self.buffer.sampleState(self.batch_size)
         for state, reward, action, done, state_suivant in mini_batch:
-            # verif
-            assert list(state.shape) == [1, self.taille_state]
-            assert list(action.shape) == [1, self.taille_action]
-            copyState = state.detach().clone()
-            copyState.requires_grad = True # to update Actor
-            # prepare data actor
-            outActor = self.actor.forward(copyState)
-            # prepare data critic
-            inputCritic = torch.hstack((copyState, outActor))
-
-            # target is calculated by Target Network
-            y = reward + self.gamma*self.dqnTarget.forward(inputCritic).detach().item()
-            if done:
-                y = reward # bah, si done -> no more futur
-
-            # Update Q-network
-            self.dqnCritic.fit(state, y, epoch=1)
-
-            # Update target network every K steps ...
-            if self.counterK == self.K:
-                self.dqnTarget.updateParam(self.dqn)
-                self.counterK = 0 # reset counter, ugly code ...
+            self.updateNetworks(state, reward, action, done, state_suivant)
         if decay and self.explore > self.explore_min:
             self.explore *= self.explore_decay
 
 
-import gymnasium as gym
 
-env = gym.make(
-    "LunarLander-v2",
-    continuous = True
-)
-a = AgentDDPG(env)
-net = a.dqnCritic.getNet()
-
-i=0
-for layer in net:
-    if isinstance(net[i], torch.nn.Linear):
-        print(net[i].weight)
-        print(net[i].weight+1)
-    break
 

@@ -2,17 +2,18 @@ import torch
 from random import sample
 
 class DQN(torch.nn.Module):
-    def __init__(self, taille_state, taille_action, lr = 3e-4):
+    def __init__(self, taille_state, taille_action, lr = 3e-4, hidden = 24):
         super().__init__()
         self.taille_state = taille_state
         self.taille_action = taille_action
         self.lr = lr
+        self.hidden = hidden
         self.net = torch.nn.Sequential(
-                        torch.nn.Linear(self.taille_state, 24),
+                        torch.nn.Linear(self.taille_state, self.hidden),
                         torch.nn.ReLU(),
-                        torch.nn.Linear(24, 24),
+                        torch.nn.Linear(self.hidden, self.hidden),
                         torch.nn.ReLU(),
-                        torch.nn.Linear(24, self.taille_action)
+                        torch.nn.Linear(self.hidden, self.taille_action)
         )
         self.optim = torch.optim.Adam(self.parameters(), lr = self.lr)
         self.f_loss = torch.nn.MSELoss()
