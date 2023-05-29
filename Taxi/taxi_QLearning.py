@@ -1,4 +1,7 @@
 import gymnasium as gym
+import os
+import sys
+sys.path.append(os.path.abspath("../agent/"))
 from agent import *
 from taxi import *
 import copy as cp

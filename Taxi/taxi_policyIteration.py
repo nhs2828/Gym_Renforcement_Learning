@@ -1,8 +1,10 @@
 import gymnasium as gym
 import copy as cp
+import os
+import sys
+sys.path.append(os.path.abspath("../agent/"))
 from agent import *
 from taxi import *
-
 
 def eval_pol(pi, env, gamma, thresh):
     nb_state = env.observation_space.n

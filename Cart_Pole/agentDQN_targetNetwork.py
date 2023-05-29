@@ -1,48 +1,22 @@
-from agentDQN import *
-import copy as cp
+import gymnasium as gym
+import math
+import time
+import os
+import sys
 
-
-class AgentDQN_TargetNetwork(AgentDQN):
-    def __init__(self, taille_state, taille_action, gamma=0.99, batch=32, K=32):
-        super().__init__(taille_state, taille_action, gamma, batch)
-        self.K = K # nombre de pas pour maj Target Network
-        self.counterK = 0 
-        self.dqnTarget = cp.deepcopy(self.dqn)
-
-    def replay(self, batch_seuil, decay):
-        if self.buffer.getLen() < batch_seuil:
-            return
-        mini_batch = self.buffer.sampleState(self.batch_size)
-        for state, reward, action, done, state_suivant in mini_batch:
-            # target est calculé par Target Network
-            y_action = reward + self.gamma*torch.max(self.dqnTarget.forward(state_suivant)).detach().item()
-            if done:
-                y_action = reward # bah, si done -> perdu donc faut savoir pour eviter
-            y = self.dqnTarget.forward(state)
-            y[0][action] = y_action # tel action amene a tel score, 1 batch, tensor donc [0] ..
-            # MAJ Q-network
-            self.dqn.fit(state, y, epoch=1)
-            self.counterK += 1
-            # Update target network every K steps ...
-            if self.counterK == self.K:
-                self.dqnTarget.updateParam(self.dqn)
-                self.counterK = 0 # reset counter, ugly code ...
-        if decay and self.explore > self.explore_min:
-            self.explore *= self.explore_decay
+sys.path.append(os.path.abspath("../agent/"))
+from agent import *
 
 
 if __name__ == '__main__':
     env = gym.make('CartPole-v1')
-    TAILE_STATE = env.observation_space.shape[0] #Box
-    TAILLE_ACTION = env.action_space.n
     TAILLE_BATCH = 32
-    K = 32
     gamma = 0.95
     nb_episode = 400
 
-    agent = AgentDQN_TargetNetwork(TAILE_STATE, TAILLE_ACTION, gamma, TAILLE_BATCH, K)
+    agent = AgentDQN_TargetNetwork(env, gamma, TAILLE_BATCH)
     score_max = -math.inf
-    #path_best = 'bestModel/TNbest.pt'
+    #path_best = 'bestModel/best.pt'
     for i in range(nb_episode):
         #state, _ = env.reset(seed=0)
         state, _ = env.reset()
@@ -61,8 +35,7 @@ if __name__ == '__main__':
                 break
             state = torch.tensor(state_suivant)
     #torch.save(agent.dqn, path_best)
-    #print("max:", score_max)
-
+    print("max:", score_max)
     # avec image sur model final
     fps = 60
     env = gym.make('CartPole-v1', render_mode = 'human')
@@ -81,3 +54,9 @@ if __name__ == '__main__':
             break
         state = torch.tensor(state_suivant)
     print(f"Fini, score = {r}")
+
+
+
+
+
+
