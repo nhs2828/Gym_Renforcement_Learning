@@ -34,6 +34,9 @@ class DQN(torch.nn.Module):
         """
         self.load_state_dict(dqn.state_dict())
 
+    def getNet(self):
+        return self.net
+
 class Buffer:
     def __init__(self, taille_max):
         self.taille = taille_max
@@ -49,3 +52,5 @@ class Buffer:
 
     def sampleState(self, taille_sample):
         return sample(self.memoire, taille_sample)
+    
+
