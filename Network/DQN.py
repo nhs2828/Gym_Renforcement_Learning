@@ -1,5 +1,6 @@
 import torch
 from random import sample
+from torch.distributions import Normal
 
 class DQN(torch.nn.Module):
     def __init__(self, taille_state, taille_action, lr = 3e-4, hidden = 24):
@@ -38,6 +39,48 @@ class DQN(torch.nn.Module):
     def getNet(self):
         return self.net
 
+class Critic(torch.nn.Module):
+    def __init__(self, taille_state, taille_action, hidden):
+        super().__init__()
+        self.taille_state = taille_state
+        self.taille_action = taille_action
+        self.hidden = hidden
+        self.net = torch.nn.Sequential(
+                        torch.nn.Linear(self.taille_state, self.hidden[0]),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(self.hidden[0], self.hidden[1]),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(self.hidden[1], self.taille_action)
+        )
+
+    def forward(self, x):
+        return self.net(x)
+    
+    def getNet(self):
+        return self.net
+
+
+class Actor(torch.nn.Module):
+    def __init__(self, taille_state, taille_action, hidden):
+        super().__init__()
+        self.taille_state = taille_state
+        self.taille_action = taille_action
+        self.hidden = hidden
+        self.net = torch.nn.Sequential(
+                        torch.nn.Linear(self.taille_state, self.hidden[0]),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(self.hidden[0], self.hidden[1]),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(self.hidden[1], self.taille_action),
+                        torch.nn.Tanh() # lunar action [-1,1]
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+    def getNet(self):
+        return self.net
+
 class Buffer:
     def __init__(self, taille_max):
         self.taille = taille_max
@@ -54,4 +97,9 @@ class Buffer:
     def sampleState(self, taille_sample):
         return sample(self.memoire, taille_sample)
     
+def addGaussianNoise(action, sigma=0.1):
+    a = torch.tensor(action)
+    dist = Normal(a, sigma)
+    return dist.sample().detach().numpy()
+
 

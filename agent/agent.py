@@ -111,54 +111,66 @@ class AgentDQN_TargetNetwork(AgentDQN):
 
 
 class AgentDDPG(Agent):
-    def __init__(self, env, gamma=0.99, batch=32, tau=0.05):
+    def __init__(self, env, config):
         super().__init__(env)
         # continuous environment
         assert env.continuous == True
-        # param agent
-        self.taille_state = self.env.observation_space.shape[0] #Box
-        self.taille_action = self.env.action_space.shape[0] #Box
-        self.batch_size = batch
-        self.buffer = Buffer(5*self.batch_size)
+        # param env
+        if env.unwrapped.spec.id == "LunarLander-v2":
+            self.taille_state = self.env.observation_space.shape[0] #Box
+            self.taille_action = self.env.action_space.shape[0] #Box
         # Neural networks
-        self.dqnCritic = DQN(self.taille_state + self.taille_action, 1)
-        self.dqnTarget = cp.deepcopy(self.dqnCritic)
-        self.actor = DQN(self.taille_state , self.taille_action) # I make only 1 actor here
+        self.Critic = Critic(self.taille_state + self.taille_action, 1, config["hidden_layer"]["critic"])
+        self.CriticTarget = cp.deepcopy(self.Critic)
+        self.Actor = Actor(self.taille_state , self.taille_action, config["hidden_layer"]["actor"]) # I make only 1 actor here
+        self.ActorTarget = cp.deepcopy(self.Actor)
         # Optim
-        self.optQ = torch.optim.Adam(self.dqnCritic.parameters(), lr = 3e-4) # optim Critic
-        self.optTarget = torch.optim.Adam(self.dqnTarget.parameters(), lr = 3e-4) # optim Target
-        self.optActor = torch.optim.Adam(self.actor.parameters(), lr = 3e-4) # optim Actor
+        self.optCritic = torch.optim.Adam(self.Critic.parameters(), config["lr"]["critic"]) # optim Critic
+        self.optActor = torch.optim.Adam(self.Actor.parameters(), config["lr"]["actor"]) # optim Actor
+   
         # Loss
         self.f_loss = torch.nn.MSELoss()
         # Hyper-param
-        self.explore = 1.0
-        self.explore_min = 0.01
-        self.explore_decay = 0.995
-        self.gamma = gamma
-        self.tau = tau # Tau to update Target Network
+        self.batch_size = config["batch"]
+        self.buffer = Buffer(config["len_buffer"])
+        self.explore = config["explore"]
+        self.explore_min = config["explore_min"]
+        self.explore_decay = config["explore_decay"]
+        self.gamma = config["gamma"]
+        self.tau = config["tau"] # Tau to update Target Network
 
     def act(self, state):
         if torch.rand(1).item() < self.explore: # solf greedy
             if self.env.unwrapped.spec.id == "LunarLander-v2":
                 return Uniform(-1, 1).sample((self.taille_action,)).numpy() # np.array([main, lateral])
-        return self.actor(state)[0].detach().numpy()
+        return self.Actor(state)[0].detach().numpy()
     
     def act_opt(self, state): # 1 actor
-        return self.actor(state)[0].detach().numpy()
+        return self.Actor(state)[0].detach().numpy()
     
     def setActor(self, path): 
-        self.actor = torch.load(path)
+        self.Actor = torch.load(path)
 
     def store(self, state, reward, action, done,  state_suivant):
         self.buffer.add([state, reward, action, done, state_suivant])
 
     def updateTargetDDPG(self):
-        netQ = self.dqnCritic.getNet()
-        netT = self.dqnTarget.getNet()
+        # critic
+        netQ = self.Critic.getNet()
+        netT = self.CriticTarget.getNet()
         i=0
         for _ in netQ: # 2 nn have same architecture
             if isinstance(netQ[i], torch.nn.Linear):
                 netT[i].weight = torch.nn.Parameter(self.tau*netQ[i].weight + (1-self.tau)*netT[i].weight)
+            i += 1
+        
+        # actor
+        netA = self.Actor.getNet()
+        netAT = self.ActorTarget.getNet()
+        i=0
+        for _ in netA: # 2 nn have same architecture
+            if isinstance(netA[i], torch.nn.Linear):
+                netAT[i].weight = torch.nn.Parameter(self.tau*netA[i].weight + (1-self.tau)*netAT[i].weight)
             i += 1
 
     def updateNetworks(self, state, reward, action, done, state_suivant):
@@ -166,33 +178,40 @@ class AgentDDPG(Agent):
         assert list(action.shape) == [1, self.taille_action]
         state_suivant.requires_grad = True # to update Actor
         # prepare data actor
-        outActor = self.actor.forward(state_suivant) # pi(state_suivant)
+        outActor_suivant = self.ActorTarget.forward(state_suivant) # pi(state_suivant)
         # prepare data critic
         input_Q = torch.hstack((state, action))
-        input_Q_suivant = torch.hstack((state_suivant, outActor)) 
+        input_Q_suivant = torch.hstack((state_suivant, outActor_suivant)) 
         #
-        Q = self.dqnTarget.forward(input_Q) # y_hat
-        Q_suivant = self.dqnTarget.forward(input_Q_suivant)
+        Q = self.Critic.forward(input_Q) # y_hat
+        Q_suivant = self.CriticTarget.forward(input_Q_suivant)
         y = reward + self.gamma*Q_suivant
         if done:
             y = torch.tensor(reward, dtype=torch.float32).view(1,-1)
-        # 1 epoch
+        # Critic, 1 epoch
         loss = self.f_loss(Q, y)
         loss.backward()
-        # Q + actor
-        self.optQ.step()
-        self.optActor.step()
-        self.optQ.zero_grad()
-        self.optActor.zero_grad()
-        # Target
-        self.updateTargetDDPG()
+        self.optCritic.step()
+        self.optCritic.zero_grad()
 
     def replay(self, batch_seuil, decay):
         if self.buffer.getLen() < batch_seuil:
             return
         mini_batch = self.buffer.sampleState(self.batch_size)
+        batch_state = []
         for state, reward, action, done, state_suivant in mini_batch:
+            batch_state.append(state.squeeze(0))
             self.updateNetworks(state, reward, action, done, state_suivant)
+        batch_state = torch.stack(batch_state)
+        # Actor
+        outActor = self.Actor.forward(batch_state)
+        intputQ_actor_update = torch.hstack((batch_state, outActor))
+        lossActor = -self.Critic(intputQ_actor_update).mean() # if Q is bad -> loss is positif, Q is good -> loss is neg (good thing)
+        lossActor.backward()
+        self.optActor.step()
+        self.optActor.zero_grad()
+        # Target
+        self.updateTargetDDPG()
         if decay and self.explore > self.explore_min:
             self.explore *= self.explore_decay
 
