@@ -2,7 +2,6 @@ import os
 import sys
 import copy as cp
 from torch.distributions.uniform import Uniform
-
 sys.path.append(os.path.abspath("../Network"))
 from DQN import *
 
@@ -138,40 +137,48 @@ class AgentDDPG(Agent):
         self.explore_decay = config["explore_decay"]
         self.gamma = config["gamma"]
         self.tau = config["tau"] # Tau to update Target Network
+        self.sigma = config["noise"] # noise
+        self.decay_sigma = config["noise_decay_step"]
+        self.step_count = 0
+        self.start_learning = config["start_learning_step"]
 
     def act(self, state):
+        self.step_count += 1
         if torch.rand(1).item() < self.explore: # solf greedy
             if self.env.unwrapped.spec.id == "LunarLander-v2":
-                return Uniform(-1, 1).sample((self.taille_action,)).numpy() # np.array([main, lateral])
-        return self.Actor(state)[0].detach().numpy()
+                return np.random.uniform(-1,1,(2,)) # np.array([main, lateral])
+        if self.step_count>0 and self.step_count%self.decay_sigma==0: #decay noise every 5000 steps
+            self.sigma *= 0.95
+        a = self.Actor(state)[0].cpu().detach().numpy()
+        a = addGaussianNoise(a, self.sigma)
+        return a
     
     def act_opt(self, state): # 1 actor
         return self.Actor(state)[0].detach().numpy()
     
+    def saveActor(self, path):
+        torch.save(self.Actor, path)
+    
     def setActor(self, path): 
         self.Actor = torch.load(path)
+
+    def addReward(self, reward):
+        """
+            Tracking last N-reward
+        """
+        self.buffer.addReward(reward)
+        return self.buffer.getLastMean()
 
     def store(self, state, reward, action, done,  state_suivant):
         self.buffer.add([state, reward, action, done, state_suivant])
 
     def updateTargetDDPG(self):
         # critic
-        netQ = self.Critic.getNet()
-        netT = self.CriticTarget.getNet()
-        i=0
-        for _ in netQ: # 2 nn have same architecture
-            if isinstance(netQ[i], torch.nn.Linear):
-                netT[i].weight = torch.nn.Parameter(self.tau*netQ[i].weight + (1-self.tau)*netT[i].weight)
-            i += 1
-        
+        for param, target_param in zip(self.Critic.parameters(), self.CriticTarget.parameters()):
+            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
         # actor
-        netA = self.Actor.getNet()
-        netAT = self.ActorTarget.getNet()
-        i=0
-        for _ in netA: # 2 nn have same architecture
-            if isinstance(netA[i], torch.nn.Linear):
-                netAT[i].weight = torch.nn.Parameter(self.tau*netA[i].weight + (1-self.tau)*netAT[i].weight)
-            i += 1
+        for param, target_param in zip(self.Actor.parameters(), self.ActorTarget.parameters()):
+            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 
     def updateNetworks(self, state, reward, action, done, state_suivant):
         assert list(state.shape) == [1, self.taille_state]
@@ -190,12 +197,12 @@ class AgentDDPG(Agent):
             y = torch.tensor(reward, dtype=torch.float32).view(1,-1)
         # Critic, 1 epoch
         loss = self.f_loss(Q, y)
+        self.optCritic.zero_grad()
         loss.backward()
         self.optCritic.step()
-        self.optCritic.zero_grad()
 
-    def replay(self, batch_seuil, decay):
-        if self.buffer.getLen() < batch_seuil:
+    def replay(self, decay):
+        if self.buffer.getLen() < self.start_learning:
             return
         mini_batch = self.buffer.sampleState(self.batch_size)
         batch_state = []
@@ -207,9 +214,9 @@ class AgentDDPG(Agent):
         outActor = self.Actor.forward(batch_state)
         intputQ_actor_update = torch.hstack((batch_state, outActor))
         lossActor = -self.Critic(intputQ_actor_update).mean() # if Q is bad -> loss is positif, Q is good -> loss is neg (good thing)
+        self.optActor.zero_grad()
         lossActor.backward()
         self.optActor.step()
-        self.optActor.zero_grad()
         # Target
         self.updateTargetDDPG()
         if decay and self.explore > self.explore_min:

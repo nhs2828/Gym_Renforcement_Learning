@@ -1,5 +1,8 @@
 import gymnasium as gym
 from taxi import *
+import os
+import sys
+sys.path.append(os.path.abspath("../agent/"))
 from agent import *
 
 def SARSA(env, gamma, lr, episode):

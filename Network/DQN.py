@@ -80,14 +80,43 @@ class Actor(torch.nn.Module):
 
     def getNet(self):
         return self.net
+    
+class NNActor(torch.nn.Module):
+    def __init__(self, taille_state, taille_action, lr = 0.00025, hidden = 256):
+        super().__init__()
+        self.taille_state = taille_state
+        self.taille_action = taille_action
+        self.lr = lr
+        self.hidden = hidden
+        self.net = torch.nn.Sequential(
+                        torch.nn.Linear(self.taille_state, 256),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(256, 256),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(256, self.taille_action),
+                        torch.nn.Tanh() # lunar action [-1,1]
+        )
+        self.optim = torch.optim.Adam(self.parameters(), lr = self.lr)
+        self.f_loss = torch.nn.MSELoss()
+
+    def forward(self, x):
+        return self.net(x)
+
+    def getNet(self):
+        return self.net
 
 class Buffer:
     def __init__(self, taille_max):
         self.taille = taille_max
         self.memoire = []
+        self.last100 = []
+        self.mean = []
         
     def getLen(self):
         return len(self.memoire)
+      
+    def getLastMean(self):
+        return self.mean[-1]
     
     def add(self, element):
         if self.getLen() >= self.taille:
@@ -96,6 +125,12 @@ class Buffer:
 
     def sampleState(self, taille_sample):
         return sample(self.memoire, taille_sample)
+
+    def addReward(self, reward):
+        if len(self.last100) >= 100:
+            del self.last100[0]
+        self.last100.append(reward)
+        self.mean.append(sum(self.last100)/len(self.last100))
     
 def addGaussianNoise(action, sigma=0.1):
     a = torch.tensor(action)
