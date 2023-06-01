@@ -20,3 +20,6 @@ The result after 400 episodes </br>
 
 
 ![fig](https://github.com/nhs2828/Gym_Renforcement_Learning/assets/78078713/18d44506-3bd4-4ef4-9ae4-6d04ed2ba686)
+
+
+![rl-video-episode-0](https://github.com/nhs2828/Gym_Renforcement_Learning/assets/78078713/e7df11bc-97f4-4347-9be8-3dd8de4bf2ed)
