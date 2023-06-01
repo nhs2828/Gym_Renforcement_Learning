@@ -22,11 +22,11 @@ The result after 400 episodes </br>
 ![fig](https://github.com/nhs2828/Gym_Renforcement_Learning/assets/78078713/18d44506-3bd4-4ef4-9ae4-6d04ed2ba686)
 
 <b>LunarLander-v2</b></br>
-<p>For the game where actions are continuous, the goal is to reach 200 points for average point of last 100 episodes, I use the algorithm DDGP for my model [[paper]]([https://web.stanford.edu/class/aa228/reports/2019/final162.pdf](https://arxiv.org/pdf/1509.02971.pdf))).</p>
+<p>For the game where actions are continuous, the goal is to reach 200 points for average point of last 100 episodes, I use the algorithm DDGP for my model [[paper]]([https://web.stanford.edu/class/aa228/reports/2019/final162.pdf](https://arxiv.org/pdf/1509.02971.pdf).</p>
 <ul>I've learnt few things over this experiment
   <li>The algorithm is very expensive, choosing the parameters and hyper-parameters is crucial</li>
   <li>256 neurones for all hidden layers is enough to reach the goal</li>
-  <li>Gaussian noise for action, with decay to reduce the noise overtime to collect more accuracy data [[paper]](https://web.stanford.edu/class/aa228/reports/2019/final162.pdf))</li>
+  <li>Gaussian noise for action, with decay to reduce the noise overtime to collect more accuracy data [[paper]](https://web.stanford.edu/class/aa228/reports/2019/final162.pdf)</li>
   <li>Exploration without learning for first K-steps</li>
 </ul>
 <p>The result after 400 episodes</p>
