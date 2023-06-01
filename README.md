@@ -34,6 +34,6 @@ Things I've learnt over this implementation
 
 ![rl-video-episode-0](https://github.com/nhs2828/Gym_Renforcement_Learning/assets/78078713/e7df11bc-97f4-4347-9be8-3dd8de4bf2ed)
 
-The result of training over 500 episodes, X-axis is number of episode, Y-axis is the reward, I've reached the goal (200 on avg of last 100 episodes) at 500th episode. The training time on colab is 10 hours
+The result of training over 500 episodes, X-axis is number of episode, Y-axis is the reward, I've reached the goal (200 on avg of last 100 episodes) at 472 episode. The training time on colab is 10 hours
 
 ![ddpg_plot](https://github.com/nhs2828/Gym_Renforcement_Learning/assets/78078713/235a83b9-678c-4e47-b83c-57fed958bfc9)
