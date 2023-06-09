@@ -61,49 +61,61 @@ class Critic(torch.nn.Module):
 
 
 class Actor(torch.nn.Module):
-    def __init__(self, taille_state, taille_action, hidden):
+    def __init__(self, taille_state, taille_action, hidden, out=0):
         super().__init__()
         self.taille_state = taille_state
         self.taille_action = taille_action
         self.hidden = hidden
-        self.net = torch.nn.Sequential(
-                        torch.nn.Linear(self.taille_state, self.hidden[0]),
-                        torch.nn.ReLU(),
-                        torch.nn.Linear(self.hidden[0], self.hidden[1]),
-                        torch.nn.ReLU(),
-                        torch.nn.Linear(self.hidden[1], self.taille_action),
-                        torch.nn.Tanh() # lunar action [-1,1]
-        )
-
+        if out == 0:
+            self.net = torch.nn.Sequential(
+                            torch.nn.Linear(self.taille_state, self.hidden[0]),
+                            torch.nn.ReLU(),
+                            torch.nn.Linear(self.hidden[0], self.hidden[1]),
+                            torch.nn.ReLU(),
+                            torch.nn.Linear(self.hidden[1], self.taille_action),
+                            torch.nn.Tanh() # lunar action [-1,1]
+            )
+        else:
+            self.net = torch.nn.Sequential(
+                            torch.nn.Linear(self.taille_state, self.hidden[0]),
+                            torch.nn.ReLU(),
+                            torch.nn.Linear(self.hidden[0], self.hidden[1]),
+                            torch.nn.ReLU(),
+                            torch.nn.Linear(self.hidden[1], self.taille_action),
+                            torch.nn.Softmax()
+            )
     def forward(self, x):
         return self.net(x)
 
     def getNet(self):
         return self.net
-    
-class NNActor(torch.nn.Module):
-    def __init__(self, taille_state, taille_action, lr = 0.00025, hidden = 256):
-        super().__init__()
-        self.taille_state = taille_state
-        self.taille_action = taille_action
-        self.lr = lr
-        self.hidden = hidden
-        self.net = torch.nn.Sequential(
-                        torch.nn.Linear(self.taille_state, 256),
-                        torch.nn.ReLU(),
-                        torch.nn.Linear(256, 256),
-                        torch.nn.ReLU(),
-                        torch.nn.Linear(256, self.taille_action),
-                        torch.nn.Tanh() # lunar action [-1,1]
-        )
-        self.optim = torch.optim.Adam(self.parameters(), lr = self.lr)
-        self.f_loss = torch.nn.MSELoss()
 
-    def forward(self, x):
-        return self.net(x)
 
-    def getNet(self):
-        return self.net
+
+# Just to test Optimal Actor, forgot to change name when training ...
+# class NNActor(torch.nn.Module):
+#     def __init__(self, taille_state, taille_action, lr = 0.00025, hidden = 256):
+#         super().__init__()
+#         self.taille_state = taille_state
+#         self.taille_action = taille_action
+#         self.lr = lr
+#         self.hidden = hidden
+#         self.net = torch.nn.Sequential(
+#                         torch.nn.Linear(self.taille_state, 256),
+#                         torch.nn.ReLU(),
+#                         torch.nn.Linear(256, 256),
+#                         torch.nn.ReLU(),
+#                         torch.nn.Linear(256, self.taille_action),
+#                         torch.nn.Tanh() # lunar action [-1,1]
+#         )
+#         self.optim = torch.optim.Adam(self.parameters(), lr = self.lr)
+#         self.f_loss = torch.nn.MSELoss()
+
+#     def forward(self, x):
+#         return self.net(x)
+
+#     def getNet(self):
+#         return self.net
 
 class Buffer:
     def __init__(self, taille_max):

@@ -18,3 +18,16 @@ cfgDDGP = {
         "actor" : [256, 256]
     }
 }
+
+cfgA2C1step = {
+    "gamma" : 0.99,
+    "beta" :0.1,
+    "lr" : {
+        "critic" : 0.0002,
+        "actor" : 0.0003
+    },
+    "hidden_layer" : {
+        "critic" : [256,256],
+        "actor" : [256, 256]
+    }
+}

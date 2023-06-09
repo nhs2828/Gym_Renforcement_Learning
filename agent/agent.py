@@ -2,6 +2,8 @@ import os
 import sys
 import copy as cp
 from torch.distributions.uniform import Uniform
+from torch.distributions import Categorical
+
 sys.path.append(os.path.abspath("../Network"))
 from DQN import *
 
@@ -222,6 +224,48 @@ class AgentDDPG(Agent):
         if decay and self.explore > self.explore_min:
             self.explore *= self.explore_decay
 
+class AgentA2C_1step(Agent):
+    def __init__(self, env, config):
+        super().__init__(env)
+        # param env
+        if env.unwrapped.spec.id == "Pong-v0":
+            self.taille_state = self.env.observation_space.shape[0] #Box
+            self.taille_action = self.env.action_space.n #discrete
+        # Neural networks
+        self.Critic = Critic(self.taille_state, 1, config["hidden_layer"]["critic"])
+        self.Actor = Actor(self.taille_state , self.taille_action, config["hidden_layer"]["actor"], out = 1) # out 1 softmax
+        self.optCritic = torch.optim.Adam(self.Critic.parameters(), config["lr"]["critic"]) # optim Critic
+        self.optActor = torch.optim.Adam(self.Actor.parameters(), config["lr"]["actor"]) # optim Actor
+        self.lossCritic = torch.nn.MSELoss()
+        # hyper param
+        self.gamma = config["gamma"]
+        self.beta = config["beta"] # entropy
+
+    def act(self, state, mode=0):
+        """
+            mode: 0 stochastics, 1 max
+        """
+        proba = self.Actor(state)
+        if mode == 1:
+            return proba.argmax(1)
+        return Categorical(proba).sample()
+    
+    def updateNetworks(self, state, reward, action, done, state_suivant):
+        proba = self.Actor(state)
+        dist = Categorical(proba)
+        # critic
+        Q = reward + (1-done)*self.gamma*self.Critic(state_suivant) - self.Critic(state)
+        V = self.Critic(state)
+        loss = self.lossCritic(V, Q)
+        self.optCritic.zero_grad()
+        loss.backward()
+        self.optCritic.step()
+
+        # actor
+        loss_actor = -dist.log_prob(action)*(Q-V - self.beta*dist.entropy())
+        self.optActor.zero_grad()
+        loss_actor.backward()
+        self.optActor.step()
 
 
 
