@@ -16,10 +16,19 @@ r_i + \gamma*\text{max}_a Q(s_{i+1}, a | \theta)
 ```
 The result after 400 episodes </br>
 ![cart_Pole](https://github.com/nhs2828/Gym_Renforcement_Learning/assets/78078713/8370611c-54cb-4da7-9065-712243486937)
+
+
 <p>Comparison between DQN and DQN with Target Network, DQN with Target Network is more stable, since we fixed target value, the performance is much more better.</p>
 
 
 ![fig](https://github.com/nhs2828/Gym_Renforcement_Learning/assets/78078713/18d44506-3bd4-4ef4-9ae4-6d04ed2ba686)
+
+
+**A2C one step**
+
+I've also trained A2C 1-step agent for Cart Pole, but I experience Catastrophic Forgetting, the reason I think of is there is no Replay Buffer for agent to keeping its experience.
+
+![CP](https://github.com/nhs2828/Gym_Renforcement_Learning/assets/78078713/658f2665-d693-43c1-a43e-8d9d8b8b91d9)
 
 ## LunarLander-v2
 For the game where actions are continuous, the goal is to reach 200 points for average point of last 100 episodes, I use the algorithm DDGP for my model [[ref]](https://arxiv.org/pdf/1509.02971.pdf).
@@ -34,6 +43,6 @@ Things I've learnt over this implementation
 
 ![rl-video-episode-0](https://github.com/nhs2828/Gym_Renforcement_Learning/assets/78078713/e7df11bc-97f4-4347-9be8-3dd8de4bf2ed)
 
-The result of training over 500 episodes, X-axis is number of episode, Y-axis is the reward, I've reached the goal (200 on avg of last 100 episodes) at 472 episode. The training time on colab is 10 hours
+The result of training over 500 episodes, X-axis is number of episode, Y-axis is the reward, I've reached the goal (200 on avg of last 100 episodes) at 472th episode. The training time on colab is 10 hours
 
 ![ddpg_plot](https://github.com/nhs2828/Gym_Renforcement_Learning/assets/78078713/235a83b9-678c-4e47-b83c-57fed958bfc9)
