@@ -15,7 +15,7 @@ if __name__ == '__main__':
     env = gym.make("Pong-v0")
     nb_episode = 500
     #f = open("score/reward", "w")
-    agent = AgentA2C_1step(env, cfgDDGP)
+    agent = AgentA2C_1step(env, cfgA2C1step)
     score_max = -math.inf
     path_best = 'bestModel/best.pt'
     for i in range(nb_episode):

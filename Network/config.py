@@ -19,15 +19,16 @@ cfgDDGP = {
     }
 }
 
-cfgA2C1step = {
+cfgA2C1step_CP = {
+    "entropy": False,
     "gamma" : 0.99,
-    "beta" :0.1,
+    "beta" :0.9,
     "lr" : {
-        "critic" : 0.0002,
-        "actor" : 0.0003
+        "critic" : 1e-3,
+        "actor" : 1e-3
     },
     "hidden_layer" : {
-        "critic" : [256,256],
-        "actor" : [256, 256]
+        "critic" : [64,32],
+        "actor" : [64, 32]
     }
 }

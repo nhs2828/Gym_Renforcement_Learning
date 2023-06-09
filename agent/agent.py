@@ -227,16 +227,18 @@ class AgentDDPG(Agent):
 class AgentA2C_1step(Agent):
     def __init__(self, env, config):
         super().__init__(env)
+        # entropy ou pas
+        self.useEntropy = config["entropy"]
         # param env
-        if env.unwrapped.spec.id == "Pong-v0":
+        if env.unwrapped.spec.id == "CartPole-v1":
             self.taille_state = self.env.observation_space.shape[0] #Box
             self.taille_action = self.env.action_space.n #discrete
-        # Neural networks
-        self.Critic = Critic(self.taille_state, 1, config["hidden_layer"]["critic"])
-        self.Actor = Actor(self.taille_state , self.taille_action, config["hidden_layer"]["actor"], out = 1) # out 1 softmax
-        self.optCritic = torch.optim.Adam(self.Critic.parameters(), config["lr"]["critic"]) # optim Critic
-        self.optActor = torch.optim.Adam(self.Actor.parameters(), config["lr"]["actor"]) # optim Actor
-        self.lossCritic = torch.nn.MSELoss()
+            # Neural networks
+            self.Critic = Critic(self.taille_state, 1, config["hidden_layer"]["critic"])
+            self.Actor = Actor(self.taille_state , self.taille_action, config["hidden_layer"]["actor"], out = 1) # out 1 softmax
+            self.optCritic = torch.optim.Adam(self.Critic.parameters(), config["lr"]["critic"]) # optim Critic
+            self.optActor = torch.optim.Adam(self.Actor.parameters(), config["lr"]["actor"]) # optim Actor
+            self.lossCritic = torch.nn.MSELoss()
         # hyper param
         self.gamma = config["gamma"]
         self.beta = config["beta"] # entropy
@@ -247,22 +249,27 @@ class AgentA2C_1step(Agent):
         """
         proba = self.Actor(state)
         if mode == 1:
-            return proba.argmax(1)
-        return Categorical(proba).sample()
+            return proba, proba.argmax(1)
+        return proba, Categorical(proba).sample()
     
-    def updateNetworks(self, state, reward, action, done, state_suivant):
-        proba = self.Actor(state)
-        dist = Categorical(proba)
+    def updateNetworks(self, state, reward, action, done, state_suivant, dist):
         # critic
-        Q = reward + (1-done)*self.gamma*self.Critic(state_suivant) - self.Critic(state)
-        V = self.Critic(state)
+        Q = reward + (1-done)*self.gamma*self.Critic.forward(state_suivant) - self.Critic.forward(state)
+        V = self.Critic.forward(state)
+
+        A = Q - V
+        # actor
+
         loss = self.lossCritic(V, Q)
         self.optCritic.zero_grad()
         loss.backward()
         self.optCritic.step()
 
         # actor
-        loss_actor = -dist.log_prob(action)*(Q-V - self.beta*dist.entropy())
+        if self.useEntropy:
+          loss_actor = -dist.log_prob(action)*(A.detach() - self.beta*dist.entropy().item())
+        else:
+          loss_actor = -dist.log_prob(action)*(A.detach())
         self.optActor.zero_grad()
         loss_actor.backward()
         self.optActor.step()
