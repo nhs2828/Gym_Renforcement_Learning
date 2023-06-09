@@ -26,7 +26,7 @@ The result after 400 episodes </br>
 
 **A2C one step**
 
-I've also trained A2C 1-step agent for Cart Pole, but I experience Catastrophic Forgetting, the reason I think of is there is no Replay Buffer for agent to keeping its experience.
+I've also trained A2C 1-step agent for Cart Pole, but I experience Catastrophic Forgetting, the reason I think of is there is no Replay Buffer for agent to keep its experience.
 
 ![CP](https://github.com/nhs2828/Gym_Renforcement_Learning/assets/78078713/658f2665-d693-43c1-a43e-8d9d8b8b91d9)
 
